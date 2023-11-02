@@ -18,6 +18,11 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
         <activity
+            android:name=".Chat"
+            android:exported="false"
+            android:label="@string/title_activity_chat_socket_io"
+            android:theme="@style/Theme.SBOOK" />
+        <activity
             android:name=".MainActivity"
             android:exported="false"
             android:label="@string/title_activity_chat"
@@ -28,7 +33,7 @@
             android:label="@string/title_activity_splash"
             android:theme="@style/Theme.SBOOK" />
         <activity
-            android:name=".Chat"
+            android:name=".ChatSocketIO"
             android:exported="true"
             android:theme="@style/Theme.SBOOK">
             <intent-filter>

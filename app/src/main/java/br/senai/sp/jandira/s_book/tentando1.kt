@@ -21,7 +21,7 @@ import androidx.navigation.NavController
 fun SocketInterfaceComposable(
     socketManager: tentando,
     navController: NavController
-    ) {
+) {
     var messageText by remember { mutableStateOf("") }
     var receivedMessage by remember { mutableStateOf("") }
 

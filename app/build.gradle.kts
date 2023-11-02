@@ -80,11 +80,13 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore:24.9.1")
     implementation("com.google.firebase:firebase-firestore-ktx:24.9.1")
     implementation(platform("androidx.compose:compose-bom:2023.03.00"))
+    implementation(platform("androidx.compose:compose-bom:2023.03.00"))
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2023.03.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2023.03.00"))
     androidTestImplementation(platform("androidx.compose:compose-bom:2023.03.00"))
     androidTestImplementation(platform("androidx.compose:compose-bom:2023.03.00"))
     debugImplementation("androidx.compose.ui:ui-tooling")
@@ -157,8 +159,8 @@ dependencies {
     // Web tortura
 //    implementation("io.ktor:ktor-client-android:1.7.4")
 //    implementation("io.ktor:ktor-client-websockets:1.7.4")
-    implementation("io.socket:socket.io-client:1.0.0")
-    implementation("io.socket:engine.io-client:1.0.0")
+    implementation("io.socket:socket.io-client:2.1.0")
+    implementation("io.socket:engine.io-client:2.1.0")
 
 //    implementation 'com.squareup.okhttp3:okhttp:4.11.0'
 }
