@@ -4,6 +4,7 @@ import io.socket.client.IO
 import io.socket.client.Socket
 
 class ChatClient(private val username: String) {
+
     private val socket: Socket = IO.socket("http://26.166.70.79:3001")
 
     fun connect() {
