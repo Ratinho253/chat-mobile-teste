@@ -14,7 +14,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 class ChatClient(private val username: String, private val localStore: Storage, private val context: Context) {
-    private val socket: Socket = IO.socket("http://26.166.70.79:3001")
+    private val socket: Socket = IO.socket("http://10.107.144.28:3001")
 
     // Adicione uma instância do LiveData para armazenar a lista de contatos
     private val contactListLiveData = ContactListLiveData()
