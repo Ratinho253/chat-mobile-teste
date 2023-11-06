@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -54,11 +56,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.senai.sp.jandira.s_book.ui.theme.SBOOKTheme
+import coil.compose.AsyncImage
 import com.google.firebase.firestore.local.LocalStore
+import com.google.gson.Gson
 import io.socket.client.IO
 import io.socket.client.Socket
+import org.json.JSONException
 import org.json.JSONObject
 
 class ChatSocketIO : ComponentActivity() {
@@ -74,8 +80,8 @@ class ChatSocketIO : ComponentActivity() {
 
                     val context = LocalContext.current
                     val localStorage = Storage()
-                    val client = ChatClient("Luiz", localStorage,context)
-                    client.connect()
+                    val client = ChatClient()
+                    client.connect("Luiz")
 
                     ChatScreen(client, localStorage)
                 }
@@ -83,8 +89,6 @@ class ChatSocketIO : ComponentActivity() {
         }
     }
 }
-
-
 
 @Composable
 fun ChatScreen(client: ChatClient, localStore: Storage) {
@@ -94,18 +98,9 @@ fun ChatScreen(client: ChatClient, localStore: Storage) {
         mutableStateOf("")
     }
 
-    LaunchedEffect(key1 = true) {
-        var contacts= ""
+    val socket = client.getSocket()
 
-        val contatos = client.receiveContacts {
-            contacts = it
-            conts = contacts
-          //  Log.e("Teste muryllo", contacts)
-        }
 
-        Log.e(TAG, "$contacts", )
-        Log.e(TAG, "$conts", )
-    }
 
     val context = LocalContext.current
 
@@ -159,58 +154,145 @@ fun ChatScreen(client: ChatClient, localStore: Storage) {
     Column(
         modifier = Modifier
             .padding(24.dp)
-            .fillMaxSize()
-            .verticalScroll(
-                ScrollState(0)
-            ),
+            .fillMaxSize(),
         verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(16.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Card(
-                shape = RoundedCornerShape(
-                    topStart = 0.dp,
-                    topEnd = 16.dp,
-                    bottomStart = 16.dp,
-                    bottomEnd = 16.dp
-                ),
-                modifier = Modifier.width(280.dp)
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "Olá, tudo bem? Eu gostaria de trocar esse livro anúnciado",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight(400),
-                        color = Color(0xFF000000)
-                    )
-                    Text(
-                        text = "18:13",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight(400),
-                        color = Color(0xFF3B4A54),
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.End
-                    )
-                }
-            }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                Card(
-                    shape = RoundedCornerShape(
-                        topStart = 16.dp,
-                        topEnd = 0.dp,
-                        bottomStart = 16.dp,
-                        bottomEnd = 16.dp
-                    ),
-                    modifier = Modifier.width(280.dp),
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        messages.forEach { msg ->
-                            androidx.compose.material.Text(msg)
+
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+            //response = socket.on("receive_contacts"){}
+
+
+            // Ouça o evento do socket
+            socket.on("receive_contacts") { args ->
+                args.let {d->
+                    if(d.isNotEmpty()){
+                        val data = d[0]
+                        Log.e("DataDebug", "$data")
+
+                        if(data.toString().isNotEmpty()){
+                            val chat = Gson().fromJson(data.toString(), SocketResponse::class.java)
+
+                            items(chat.users){
+                                Card(
+                                    shape = RoundedCornerShape(
+                                        topStart = 0.dp,
+                                        topEnd = 16.dp,
+                                        bottomStart = 16.dp,
+                                        bottomEnd = 16.dp
+                                    ),
+                                    modifier = Modifier.width(280.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                         AsyncImage(
+                                             model = it.users[0].foto ,
+                                             contentDescription =""
+                                         )
+                                        Text(
+                                            text = it.users[0].nome,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight(400),
+                                            color = Color(0xFF000000)
+                                        )
+                                        Text(
+                                            text = it.users[1].nome,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight(400),
+                                            color = Color(0xFF3B4A54),
+                                            modifier = Modifier.fillMaxWidth(),
+                                            textAlign = TextAlign.End
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
+
+
+//            socket.on("receive_contacts") { args ->
+//                val contatos = args[0].toString()
+//
+//                Log.e(TAG, "Contatos: ", )
+//                val listConts: UserChat = args[0] as UserChat
+//                Log.e(TAG, "Conts: $listConts " )
+//
+//                items(listConts.users){
+//                    Card(
+//                        shape = RoundedCornerShape(
+//                            topStart = 0.dp,
+//                            topEnd = 16.dp,
+//                            bottomStart = 16.dp,
+//                            bottomEnd = 16.dp
+//                        ),
+//                        modifier = Modifier.width(280.dp)
+//                    ) {
+//                        Column(modifier = Modifier.padding(12.dp)) {
+//                            Text(
+//                                text = it.nome,
+//                                fontSize = 12.sp,
+//                                fontWeight = FontWeight(400),
+//                                color = Color(0xFF000000)
+//                            )
+//                            Text(
+//                                text = "18:13",
+//                                fontSize = 10.sp,
+//                                fontWeight = FontWeight(400),
+//                                color = Color(0xFF3B4A54),
+//                                modifier = Modifier.fillMaxWidth(),
+//                                textAlign = TextAlign.End
+//                            )
+//                        }
+//                    }
+//                }
+//            }
+
+//            Card(
+//                shape = RoundedCornerShape(
+//                    topStart = 0.dp,
+//                    topEnd = 16.dp,
+//                    bottomStart = 16.dp,
+//                    bottomEnd = 16.dp
+//                ),
+//                modifier = Modifier.width(280.dp)
+//            ) {
+//                Column(modifier = Modifier.padding(12.dp)) {
+//                    Text(
+//                        text = "Olá, tudo bem? Eu gostaria de trocar esse livro anúnciado",
+//                        fontSize = 12.sp,
+//                        fontWeight = FontWeight(400),
+//                        color = Color(0xFF000000)
+//                    )
+//                    Text(
+//                        text = "18:13",
+//                        fontSize = 10.sp,
+//                        fontWeight = FontWeight(400),
+//                        color = Color(0xFF3B4A54),
+//                        modifier = Modifier.fillMaxWidth(),
+//                        textAlign = TextAlign.End
+//                    )
+//                }
+//            }
+//            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+//                Card(
+//                    shape = RoundedCornerShape(
+//                        topStart = 16.dp,
+//                        topEnd = 0.dp,
+//                        bottomStart = 16.dp,
+//                        bottomEnd = 16.dp
+//                    ),
+//                    modifier = Modifier.width(280.dp),
+//                ) {
+//                    Column(modifier = Modifier.padding(12.dp)) {
+//                        messages.forEach { msg ->
+//                            androidx.compose.material.Text(msg)
+//                        }
+//                    }
+//                }
+//            }
         }
         Spacer(modifier = Modifier.height(16.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
