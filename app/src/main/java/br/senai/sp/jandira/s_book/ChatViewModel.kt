@@ -1,4 +1,7 @@
 package br.senai.sp.jandira.s_book
 
-class ChatViewModel {
+import androidx.lifecycle.ViewModel
+
+class ChatViewModel: ViewModel() {
+    var idChat: String = ""
 }

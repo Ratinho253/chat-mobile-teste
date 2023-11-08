@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,6 +32,7 @@ import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -54,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
+import br.senai.sp.jandira.s_book.components.conversation_chat.screen.ConversationChatScreen
 import br.senai.sp.jandira.s_book.ui.theme.SBOOKTheme
 import coil.compose.AsyncImage
 import com.google.firebase.firestore.local.LocalStore
@@ -74,7 +77,7 @@ class ChatSocketIO : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
 
-                    ChatScreen()
+                    ChatScreen(1)
                 }
             }
         }
@@ -82,24 +85,40 @@ class ChatSocketIO : ComponentActivity() {
 }
 
 @Composable
-fun ChatScreen() {
+fun ChatScreen(idUsuario: Int) {
     val client = ChatClient()
-    client.connect(1)
+    client.connect(idUsuario)
+    val socket = client.getSocket()
 
-    ContatosScreen(client = client)
+    var tela by remember {
+        mutableStateOf(false)
+    }
+
+    var chatViewModel = viewModel<ChatViewModel>()
+
+    if (tela) {
+        ConversaScreen(
+            socket = socket,
+            chatViewModel = chatViewModel,
+            idUsuario = idUsuario,
+            client = client
+        )
+    } else {
+        ContatosScreen(client = client, idUsuario, socket = socket, chatViewModel) {
+            tela = it
+        }
+    }
 }
 
 @Composable
-fun ContatosScreen(client: ChatClient){
+fun ContatosScreen(
+    client: ChatClient,
+    idUsuario: Int,
+    socket: Socket,
+    chatViewModel: ChatViewModel,
+    onChangeTela: (Boolean) -> Unit
+) {
     val TAG = "Teste de socket"
-//    val client = ChatClient()
-//
-//    LaunchedEffect(key1 = true) {
-//
-//        client.connect(1)
-//    }
-
-    val socket = client.getSocket()
 
     Column(
         modifier = Modifier.fillMaxSize()
@@ -127,6 +146,7 @@ fun ContatosScreen(client: ChatClient){
                 }
             }
         }
+
         LazyColumn(
             modifier = Modifier
                 .padding(24.dp),
@@ -134,46 +154,166 @@ fun ContatosScreen(client: ChatClient){
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             items(listaContatos.users) {
-                Cards(nome1 = it.users[0].nome, nome2 = it.users[1].nome, it.users[0].foto)
+                var contato = it.users.filter { user -> user.id != idUsuario }
+                Log.e(TAG, "Contato: $contato")
+
+                Cards(nome1 = contato[0].nome, contato[0].foto) {
+                    chatViewModel.idChat = it.id_chat
+                    socket.emit("listMessages", it.id_chat)
+                    onChangeTela(true)
+                }
             }
         }
+    }
+}
 
-        var message by remember {
-            mutableStateOf("")
-        }
+@Composable
+fun ConversaScreen(
+    client: ChatClient,
+    socket: Socket,
+    chatViewModel: ChatViewModel,
+    idUsuario: Int
+) {
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            OutlinedTextField(
-                value = message,
-                onValueChange = {
-                    message = it
-                },
-                shape = RoundedCornerShape(50.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedBorderColor = colorResource(id = R.color.cinza),
-                    unfocusedBorderColor = colorResource(id = R.color.cinza)
+    var message by remember {
+        mutableStateOf("")
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Spacer(modifier = Modifier.height(16.dp))
+
+        var listaMensagens by remember {
+            mutableStateOf(
+                MensagensResponse(
+                    status = 0,
+                    message = "",
+                    id_chat = "",
+                    usuarios = listOf(),
+                    data_criacao = "",
+                    hora_criacao = "",
+                    mensagens = listOf()
                 )
             )
-//            Button(
-//                onClick = {
-//                    client.connect(1).
-//                    message = ""
-//                },
-//
-//                modifier = Modifier.size(50.dp),
-//                shape = CircleShape,
-//                colors = ButtonDefaults.buttonColors(Color(221, 163, 93, 255))
-//            ) {
-//                Icon(
-//                    painter = painterResource(id = R.drawable.baseline_send_24),
-//                    contentDescription = ""
-//                )
-//            }
-            Button(
-                onClick = {socket.emit("message", message)}
-            ) {
+        }
 
+        // Ouça o evento do socket
+        socket.on("receive_message") { args ->
+            args.let { d ->
+                if (d.isNotEmpty()) {
+                    val data = d[0]
+                    if (data.toString().isNotEmpty()) {
+                        val mensagens =
+                            Gson().fromJson(data.toString(), MensagensResponse::class.java)
+
+                        listaMensagens = mensagens
+                    }
+                }
             }
+        }
+
+        LazyColumn(
+            modifier = Modifier
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Log.e("Teste chegada", "Chegou")
+            Log.e("Teste mensagens", "${listaMensagens.mensagens}")
+            items(listaMensagens.mensagens) {
+                Log.e("Mensagens", "$it ")
+                if (it.messageTo == idUsuario) {
+                    CardText(
+                        mensagem = it.message,
+                        hora = it.hora_criacao,
+                        envio = it.messageBy,
+                        cor = Color.DarkGray
+                    )
+                } else {
+                    CardText(
+                        mensagem = it.message,
+                        hora = it.hora_criacao,
+                        envio = it.messageBy,
+                        cor = Color.LightGray
+                    )
+                }
+            }
+        }
+    }
+
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        OutlinedTextField(
+            value = message,
+            onValueChange = {
+                message = it
+            },
+            shape = RoundedCornerShape(50.dp),
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                focusedBorderColor = colorResource(id = R.color.cinza),
+                unfocusedBorderColor = colorResource(id = R.color.cinza)
+            )
+        )
+        Button(
+            onClick = {
+                client.sendMessage(message)
+            },
+
+            modifier = Modifier.size(50.dp),
+            shape = CircleShape,
+            colors = ButtonDefaults.buttonColors(Color(221, 163, 93, 255))
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.baseline_send_24),
+                contentDescription = ""
+            )
+        }
+
+    }
+}
+
+@Composable
+fun CardText(
+    mensagem: String,
+    hora: String,
+    envio: Int,
+    cor: Color
+) {
+    Card(
+        modifier = Modifier
+            .width(280.dp)
+            .background(cor),
+        shape = RoundedCornerShape(
+            topStart = 0.dp,
+            topEnd = 16.dp,
+            bottomStart = 16.dp,
+            bottomEnd = 16.dp
+        ),
+
+        ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = mensagem,
+                fontSize = 12.sp,
+                fontWeight = FontWeight(400),
+                color = Color(0xFF000000)
+            )
+            Text(
+                text = "$envio",
+                fontSize = 10.sp,
+                fontWeight = FontWeight(400),
+                color = Color(0xFF3B4A54),
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.End
+            )
+            Text(
+                text = hora,
+                fontSize = 10.sp,
+                fontWeight = FontWeight(400),
+                color = Color(0xFF3B4A54),
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.End
+            )
         }
     }
 }
@@ -181,8 +321,8 @@ fun ContatosScreen(client: ChatClient){
 @Composable
 fun Cards(
     nome1: String,
-    nome2: String,
-    foto: String
+    foto: String,
+    onClick: () -> Unit
 ) {
 
     Card(
@@ -192,7 +332,9 @@ fun Cards(
             bottomStart = 16.dp,
             bottomEnd = 16.dp
         ),
-        modifier = Modifier.width(280.dp)
+        modifier = Modifier
+            .width(280.dp)
+            .clickable { onClick() }
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             AsyncImage(
@@ -205,14 +347,14 @@ fun Cards(
                 fontWeight = FontWeight(400),
                 color = Color(0xFF000000)
             )
-            Text(
-                text = nome2,
-                fontSize = 10.sp,
-                fontWeight = FontWeight(400),
-                color = Color(0xFF3B4A54),
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.End
-            )
+//            Text(
+//                text = nome2,
+//                fontSize = 10.sp,
+//                fontWeight = FontWeight(400),
+//                color = Color(0xFF3B4A54),
+//                modifier = Modifier.fillMaxWidth(),
+//                textAlign = TextAlign.End
+//            )
         }
     }
 
