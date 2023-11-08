@@ -256,6 +256,10 @@ fun ConversaScreen(
         )
         Button(
             onClick = {
+//                val mensagem = Mensagem(
+//
+//                )
+
                 client.sendMessage(message)
             },
 
