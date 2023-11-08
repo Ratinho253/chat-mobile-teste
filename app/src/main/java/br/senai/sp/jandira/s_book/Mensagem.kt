@@ -1,6 +1,6 @@
 package br.senai.sp.jandira.s_book
 
-data class Mensagens(
+data class Mensagem(
     var _id: String,
     var messageBy: Int,
     var messageTo: Int,
