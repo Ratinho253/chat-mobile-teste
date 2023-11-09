@@ -1,20 +1,11 @@
 package br.senai.sp.jandira.s_book
 
-import android.content.Context
-import android.util.Log
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.LiveData
-import com.google.firebase.firestore.local.LocalStore
 import io.socket.client.IO
 import io.socket.client.Socket
-import io.socket.emitter.Emitter
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 class ChatClient() {
-    private val socket: Socket = IO.socket("http://10.107.144.28:3001")
+    private val socket: Socket = IO.socket("http://26.166.70.79:3001")
 
     fun connect(idUsuario: Int) {
         socket.connect()
@@ -34,7 +25,7 @@ class ChatClient() {
         }
     }
 
-    fun sendMessage(message: String) {
+    fun sendMessage(message: JSONObject) {
         socket.emit("message", message)
     }
 

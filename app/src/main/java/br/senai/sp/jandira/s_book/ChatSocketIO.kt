@@ -1,12 +1,9 @@
 package br.senai.sp.jandira.s_book
 
 import android.os.Bundle
-import android.os.Message
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,44 +23,32 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.TextFieldDefaults
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
-import br.senai.sp.jandira.s_book.components.conversation_chat.screen.ConversationChatScreen
 import br.senai.sp.jandira.s_book.ui.theme.SBOOKTheme
 import coil.compose.AsyncImage
-import com.google.firebase.firestore.local.LocalStore
 import com.google.gson.Gson
-import io.socket.client.IO
 import io.socket.client.Socket
-import org.json.JSONException
 import org.json.JSONObject
 
 class ChatSocketIO : ComponentActivity() {
@@ -159,6 +144,7 @@ fun ContatosScreen(
 
                 Cards(nome1 = contato[0].nome, contato[0].foto) {
                     chatViewModel.idChat = it.id_chat
+                    chatViewModel.idUser2 = contato[0].id
                     socket.emit("listMessages", it.id_chat)
                     onChangeTela(true)
                 }
@@ -174,6 +160,9 @@ fun ConversaScreen(
     chatViewModel: ChatViewModel,
     idUsuario: Int
 ) {
+
+    val idChat = chatViewModel.idChat
+    val idUser2 = chatViewModel.idUser2
 
     var message by remember {
         mutableStateOf("")
@@ -193,10 +182,22 @@ fun ConversaScreen(
                     usuarios = listOf(),
                     data_criacao = "",
                     hora_criacao = "",
-                    mensagens = listOf()
+                    mensagens = mutableStateListOf()
                 )
             )
         }
+
+//        val mensagem = Mensagem(
+//            _id = "",
+//            messageBy = 0,
+//            messageTo = 0,
+//            message = "",
+//            image = "",
+//            data_criacao = "",
+//            hora_criacao = "",
+//            chatId = "",
+//            __v = null
+//        )
 
         // Ouça o evento do socket
         socket.on("receive_message") { args ->
@@ -208,10 +209,28 @@ fun ConversaScreen(
                             Gson().fromJson(data.toString(), MensagensResponse::class.java)
 
                         listaMensagens = mensagens
+                        Log.e("TesteIndo", "${listaMensagens.mensagens.reversed()}", )
                     }
                 }
             }
         }
+
+        // Ouça o evento do socket
+//        socket.on("return_message") { args ->
+//            args.let { d ->
+//                if (d.isNotEmpty()) {
+//                    val data = d[0]
+//                    if (data.toString().isNotEmpty()) {
+//                        val mensagens =
+//                            Gson().fromJson(data.toString(), Mensagem::class.java)
+//
+//                        list = list + mensagens
+//
+//                       Log.e("Lista", "Lista: ${listaMensagens.mensagens}" )
+//                    }
+//                }
+//            }
+//        }
 
         LazyColumn(
             modifier = Modifier
@@ -219,21 +238,18 @@ fun ConversaScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Log.e("Teste chegada", "Chegou")
-            Log.e("Teste mensagens", "${listaMensagens.mensagens}")
-            items(listaMensagens.mensagens) {
-                Log.e("Mensagens", "$it ")
+            items(listaMensagens.mensagens.reversed()) {
                 if (it.messageTo == idUsuario) {
                     CardText(
                         mensagem = it.message,
-                        hora = it.hora_criacao,
+                        hora = it.hora_criacao!!,
                         envio = it.messageBy,
                         cor = Color.DarkGray
                     )
                 } else {
                     CardText(
                         mensagem = it.message,
-                        hora = it.hora_criacao,
+                        hora = it.hora_criacao!!,
                         envio = it.messageBy,
                         cor = Color.LightGray
                     )
@@ -256,11 +272,19 @@ fun ConversaScreen(
         )
         Button(
             onClick = {
-//                val mensagem = Mensagem(
-//
-//                )
 
-                client.sendMessage(message)
+                val json = JSONObject().apply {
+                    put("messageBy", idUsuario)
+                    put("messageTo", idUser2)
+                    put("message", message)
+                    put("image", "")
+                    put("chatId", idChat)
+                }
+
+                Log.e("JSON", "$json", )
+               // val jsonString = Json.encodeToString(json)
+
+                client.sendMessage(json)
             },
 
             modifier = Modifier.size(50.dp),
